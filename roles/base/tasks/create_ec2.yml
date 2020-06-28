@@ -1,0 +1,91 @@
+---
+
+# select AMI based upon chosen_os var
+- set_fact: ami={{ item.ami }}
+  loop: "{{ ec2_images }}"
+  when: chosen_os == "{{ item.os }}"
+  
+# deploy multiple ec2 instances
+- name: create new vms | no RAID
+  ec2_instance:
+    name: "{{ vm_name_base }}{{ 100000 | random }}_NODE"
+    state: running
+    key_name: "{{ ssh_key }}"
+    vpc_subnet_id: "{{ public_subnet.subnet.id }}"
+    instance_type: "{{ ec2_type | default('t3.micro') }}"
+    security_groups:
+      - ssh_icmp_all
+      - nfs_traffic
+      - openmpi_traffic
+    network:
+      assign_public_ip: true
+    image_id: "{{ ami }}"
+    ebs_optimized: yes
+    tags:
+      Type: NODE
+    wait: no
+    volumes:
+      - device_name: /dev/sda1
+        ebs:
+          delete_on_termination: true
+          volume_size: 20
+          volume_type: "{{ volume_type }}"
+          iops: "{{ iops }}"
+  with_sequence: count="{{ ec2_number | int }}"
+
+  # using larger type for NFS
+- set_fact: ec2_type=m5.4xlarge
+
+- name: create new vms | RAID file server and head node | tag as NFS server | wait 45 seconds
+  ec2_instance:
+    name: "{{ vm_name_base }}{{ 100000 | random }}_NFS"
+    state: running
+    key_name: "{{ ssh_key }}"
+    vpc_subnet_id: "{{ public_subnet.subnet.id }}"
+    instance_type: "{{ ec2_type | default('t3.micro') }}"
+    security_groups:
+      - ssh_icmp_all
+      - nfs_traffic
+      - openmpi_traffic
+    network:
+      assign_public_ip: true
+    image_id: "{{ ami }}"
+    tags:
+      Type: NFS
+    ebs_optimized: yes
+    volumes:
+      - device_name: /dev/sda1
+        ebs:
+          delete_on_termination: true
+          volume_size: 20
+          volume_type: "{{ volume_type }}"
+          iops: "{{ iops }}"
+      - device_name: /dev/sdf
+        ebs:
+          delete_on_termination: true
+          volume_size: "{{ volume_size }}"
+          volume_type: "{{ volume_type }}"
+          iops: "{{ iops }}"
+      - device_name: /dev/sdg
+        ebs:
+          delete_on_termination: true
+          volume_size: "{{ volume_size }}"
+          volume_type: io1
+          iops: "{{ iops }}"
+      - device_name: /dev/sdh
+        ebs:
+          delete_on_termination: true
+          volume_size: "{{ volume_size }}"
+          volume_type: "{{ volume_type }}"
+          iops: "{{ iops }}"
+      - device_name: /dev/sdi
+        ebs:
+          delete_on_termination: true
+          volume_size: "{{ volume_size }}"
+          volume_type: "{{ volume_type }}"
+          iops: "{{ iops }}"
+    wait: yes
+    wait_timeout: 45
+  with_sequence: count="{{ ebs_number | int }}"
+
+...

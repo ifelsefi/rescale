@@ -1,0 +1,9 @@
+---
+foam_version: 1912
+
+base_url: "https://sourceforge.net/projects/openfoam/files"
+
+prefix: "/scratch/mpiuser"
+dl_dir: "/tmp"
+
+...

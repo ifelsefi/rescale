@@ -1,0 +1,147 @@
+###########################################################################################################
+Bootstrap: docker
+From: centos
+
+%labels
+    Author quackmaster@protonmail.com
+    Version v0.0.7
+
+###########################################################################################################
+%environment
+
+# define aws variables so we dont need 'aws configure'
+export AWS_ACCESS_KEY_ID=<---------------KEYS GO HERE---------------->
+export AWS_SECRET_ACCESS_KEY=<---------------KEYS GO HERE---------------->
+export AWS_DEFAULT_REGION=us-east-2
+
+# configure ansible environment
+export AWS_DEFAULT_REGION=us-east-2
+export ANSIBLE_INVENTORY=/ansible/inventory.aws_ec2.yaml
+export ANSIBLE_CONFIG=/ansible/ansible.cfg
+export ANSIBLE_LIBRARY=/ansible/.ansible/plugins/modules
+
+###########################################################################################################
+%runscript
+
+# below tasks performed at runtinme with 'singularity run'
+
+# activate ansible / aws venv
+source /venv/ansible/bin/activate
+
+# remove any ssh key if it already exists
+aws ec2 delete-key-pair --key-name "ansible-aws-ec2-key"
+
+# import key for all ec2 instances
+aws ec2 import-key-pair --key-name "ansible-aws-ec2-key" --public-key-material fileb:///ssh/id_rsa.pub
+
+# deploy ec2 vms, run simulation, copy results to /tmp
+ansible-playbook /ansible/base.yml -e "chosen_os=centos"
+
+# terminate vms if ansible exited with rc 0
+if [[ $? -eq 0 ]]; then
+    echo "\n\nSimulation Done - Terminating Cluster!\n\n"
+    ansible-playbook /ansible/terminate.yml
+    echo "\n\nCheck /tmp/FOAM_RUN Directory with paraFoam.\n\n"
+else
+    echo "\n\nSomething went wrong.  Exiting!\n\n"
+    echo "\n\nEC2 instances still running!\n\n"
+    echo "\n\nDo 'singularity shell /tmp/ansible-aws.sif' then ssh into nodes and look for issues!\n\n"
+    exit 1
+fi
+
+############################################################################################################
+%setup 
+
+# below tasks executed in operating system during container build
+
+# define user which executes 'singularity run'
+# so ssh key permissions work properly
+SINGULARITY_USER=<---------------USER GOES HERE---------------->
+
+# create directories for ssh kes, awsv2 cli, ansible role, and virtualenv
+mkdir -pv ${SINGULARITY_ROOTFS}/ssh
+chmod 755 ${SINGULARITY_ROOTFS}/ssh
+
+mkdir -pv ${SINGULARITY_ROOTFS}/aws
+chmod 755 ${SINGULARITY_ROOTFS}/aws
+
+mkdir -pv ${SINGULARITY_ROOTFS}/ansible
+chmod 755 ${SINGULARITY_ROOTFS}/ansible
+
+mkdir -pv ${SINGULARITY_ROOTFS}/venv
+chmod 755 ${SINGULARITY_ROOTFS}/venv
+
+# generate keypair - overwrite if already present
+yes 'y' | ssh-keygen -t rsa -b 4096 -f ${SINGULARITY_ROOTFS}/ssh/id_rsa -N ''
+
+# set permissions on ssh directory
+chown -R ${SINGULARITY_USER}:${SINGULARITY_USER} ${SINGULARITY_ROOTFS}/ssh
+
+# set permissions on aws directory
+chown -R ${SINGULARITY_USER}:${SINGULARITY_USER} ${SINGULARITY_ROOTFS}/aws
+
+# set permissions on venv directory
+chown -R ${SINGULARITY_USER}:${SINGULARITY_USER} ${SINGULARITY_ROOTFS}/venv
+
+# clone ansible role
+GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" git clone git@github.com:ifelsefi/rescale.git ${SINGULARITY_ROOTFS}/ansible
+
+# set permissions on ansible role
+chown -R ${SINGULARITY_USER}:${SINGULARITY_USER} ${SINGULARITY_ROOTFS}/ansible
+
+############################################################################################################
+%post
+
+# tasks executed in container during build after %setup completes
+
+# install other software
+yum install -y epel-release && yum install -y openssh-clients which groff-base git python3 python3-pip python3-virtualenv unzip vim rsync
+
+# upgrade pip
+pip3 install --prefix /venv --upgrade pip
+
+# install ansible venv
+cd /venv && virtualenv ansible
+source /venv/ansible/bin/activate
+pip3 install ansible==2.9.9 boto3
+
+# download and install aws command-line utilities
+cd /venv && curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip 
+chmod +x /venv/aws/install
+/bin/bash /venv/aws/install --update -i /venv
+rm -f /venv/awscliv2.zip
+
+# populate /ssh/config file
+cat <<EOT >> /ssh/config
+Host *.compute.amazonaws.com
+User ec2-user
+StrictHostKeyChecking no
+GSSAPIAuthentication no
+IdentityFile /ssh/id_rsa
+ServerAliveInterval 60
+TCPKeepAlive yes
+EOT
+
+
+############################################################################################################
+%test
+
+# run tests with 'singularity test' to ensure container built to proper specs
+
+grep -q "CentOS" /etc/redhat-release
+
+if [[ $? -eq 0 ]]; then
+    echo "Container base is centos as expected."
+else
+    echo "Container base is not centos."
+fi
+
+source /venv/ansible/bin/activate
+ansible --version
+
+if [[ $? -eq 0 ]]; then
+    echo "Ansible is present."
+else
+    echo "Ansible is not present."
+fi

@@ -1,0 +1,60 @@
+---
+- name: gather facts from ec2 instances
+  tags: common
+  setup:
+
+- name: install epel
+  tags: common,yum
+  yum: name=epel-release state=latest
+  register: yum_epel
+  until: yum_epel is not failed
+  retries: 5
+
+- name: install a few things
+  tags: common,yum
+  yum: name="{{ packages }}" state=latest update_cache=yes
+  register: yum_common
+  until: yum_common is not failed
+  retries: 5
+
+- name: update all packages
+  tags: common
+  yum: name=* state=latest
+  register: update_everything
+  until: update_everything is not failed
+  retries: 5
+
+- name: deploy /etc/hosts file
+  tags: common
+  template: src=hosts.j2 dest=/etc/hosts owner=root group=root mode=0644
+
+- name: deploy sshd config
+  tags: ssh
+  template: src=sshd.conf.j2 dest=/etc/ssh/sshd_config mode=0600 owner=root group=root backup=yes
+  notify: sshd
+
+- name: copy motd
+  tags: motd
+  copy: src=motd dest=/etc/motd
+
+- name: template sysctl.conf
+  tags: sysctl
+  template: src=sysctl.j2 dest=/etc/sysctl.conf
+
+- name: template limits.conf
+  tags: limits
+  template: src=limits.j2 dest=/etc/security/limits.conf owner=root group=root mode=0644
+
+- name: template nproc
+  tags: limits
+  template: src=90-nproc.conf.j2 dest=/etc/security/limits.d/90-nproc.conf owner=root group=root mode=0644
+
+- name: deploy /etc/mpinodes file
+  tags: common
+  template: src=mpinodes.j2 dest=/etc/mpinodes owner=root group=root mode=0644
+
+- name: restart machine after update | wait 60 seconds for reboot
+  tags: common
+  reboot: reboot_timeout=60
+  when: update_everything.changed
+...

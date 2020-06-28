@@ -1,0 +1,41 @@
+---
+# ec2 instance type
+ec2_choice: t3.micro
+
+# number of ec2 instances | used for compute nodes
+ec2_number: 2
+
+# define number of NFS servers to create | the head node
+ebs_number: 1
+
+# name of ssh keypair in aws
+ssh_key: "ansible-aws-ec2-key"
+
+# location of ssh key on container that runs ansible
+ssh_key_location: "/ssh/id_rsa"
+
+# vm name - can be overwriten using "-e vm-name=var"
+vm_name_base: "ec2_vm_"
+
+ec2_images:
+  - { ami: 'ami-0ac019f4fcb7cb7e6', os: 'ubuntu' }
+  - { ami: 'ami-0a5bd0847d7badbbf', os: 'centos' }
+
+# public subnet
+public_cidr: "10.1.1.0/24"
+
+# private subnet | not currently attached
+private_cidr: "10.2.0.0/16"
+
+# region
+region: "us-east-2"
+
+# iops for ebs | should be over 9000
+iops: "1000"
+
+# ebs volume size in GB
+volume_size: "500"       
+
+# ebs volume type
+volume_type: "io1"
+...

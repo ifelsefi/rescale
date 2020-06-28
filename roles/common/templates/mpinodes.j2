@@ -1,0 +1,8 @@
+
+# compute node MPI file
+{% for host in groups.tag_Type_NODE |default()%}
+node{{ loop.index }} slots={{ hostvars[host]['ansible_processor_vcpus'] }}
+{% endfor %}
+{% for host in groups.tag_Type_NFS |default()%}
+headnode slots={{ hostvars[host]['ansible_processor_vcpus'] }}
+{% endfor %}

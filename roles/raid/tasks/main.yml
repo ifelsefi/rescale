@@ -1,0 +1,67 @@
+---
+
+- name: include EBS variables from base role
+  include_vars: file=roles/base/defaults/main.yml name=imported
+
+- name: look for raid
+  tags: raid
+  shell: ls {{ raid_dev }}
+  register: sh_ls_raid_dev
+  changed_when: false
+  ignore_errors: True
+
+- name: look for nvme devices
+  tags: raid
+  shell: lsblk | grep -v -E 'part|loop|8G' | grep {{ imported.volume_size }} | awk ' { print $1 } '
+  register: nvme_devices
+
+#- debug: msg="{{ nvme_devices }}"
+#tags: raid
+
+#- debug: msg=" Data type of 'nvme_devices'  is {{ nvme_devices | type_debug }} "
+#  tags: raid
+
+#- debug: msg="{{ sh_ls_raid_dev }}"
+# tags: raid
+
+- name: create raid | nvme 4 ssds
+  tags: raid
+  shell: yes | mdadm --create --verbose "{{ raid_dev }}" --level="{{ raid_level }}" --name="{{ raid_name }}" --raid-devices=4 /dev/{{ nvme_devices.stdout_lines[0] }} /dev/{{ nvme_devices.stdout_lines[1] }} /dev/{{ nvme_devices.stdout_lines[2] }} /dev/{{ nvme_devices.stdout_lines[3] }}
+  when: sh_ls_raid_dev.failed
+
+- name: show raid details
+  tags: raid
+  shell: mdadm --detail "{{ raid_dev }}"
+  changed_when: false
+
+- name: check filesystem {{ raid_dev }}
+  tags: raid
+  shell: parted -l | grep "{{ raid_dev }}"
+  register: sh_parted_l
+  changed_when: false
+
+#- debug: msg="{{ sh_parted_l }}"
+#tags: raid
+
+- name: create xfs raid
+  tags: raid
+  shell: mkfs.xfs -L "{{ raid_name }}" "{{ raid_dev }}"
+  when: sh_parted_l.stderr_lines.count("unrecognised disk label") != '0'
+
+- name: create scratch mount
+  tags: raid
+  file: state=directory path="{{ raid_mount }}" owner=root group=root mode="0755"
+
+- name: mount raid
+  tags: raid
+  mount:
+    name: "{{ raid_mount }}"
+    src: "{{ raid_dev }}"
+    fstype: xfs
+    state: mounted
+
+- name: chmod scratch
+  tags: raid
+  shell: "chmod a=rwx,o+t {{ raid_mount }}"
+...
+

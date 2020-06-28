@@ -1,0 +1,63 @@
+---
+- name: allow ssh and icmp from all
+  ec2_group:
+    name: ssh_icmp_all
+    description: ssh from all
+    vpc_id: "{{ vpc_id.vpc.id }}"
+    region: "{{ region }}"
+    rules:
+      - proto: tcp
+        ports:
+          - 22
+        cidr_ip: 0.0.0.0/0
+        rule_desc: allow all on port 22
+      - proto: icmp
+        from_port: 8 # icmp type, -1 = any type
+        to_port:  -1 # icmp subtype, -1 = any subtype
+        cidr_ip: 0.0.0.0/0
+        rule_desc: allow all icmp
+
+- name: nfs traffic permitted between ec2 instances
+  ec2_group:
+    name: nfs_traffic
+    description: nfs traffic
+    vpc_id: "{{ vpc_id.vpc.id }}"
+    region: "{{ region }}"
+    rules:
+      - proto: tcp
+        ports:
+          - 111
+          - 892
+          - 2049
+          - 32768
+          - 44182
+          - 54508
+        cidr_ip: "{{ public_cidr }}"
+        rule_desc: allow tcp nfs traffic
+      - proto: udp
+        ports:
+          - 111
+          - 892
+          - 2049
+          - 32768
+        cidr_ip: "{{ public_cidr }}"
+        rule_desc: allow udp nfs traffic
+      - proto: udp
+        from_port: 32770
+        to_port: 32800
+        cidr_ip: "{{ public_cidr }}"
+        rule_desc: allow udp nfs traffic
+
+- name: openmpi tcp / oob traffic between instances
+  ec2_group:
+    name: openmpi_traffic
+    description: openmpi_traffic
+    vpc_id: "{{ vpc_id.vpc.id }}"
+    region: "{{ region }}"
+    rules:
+      - proto: tcp
+        from_port: 31337
+        to_port: 33385
+        cidr_ip: "{{ public_cidr }}"
+        rule_desc: allow tcp openmpi traffic
+...

@@ -1,0 +1,22 @@
+{% for host in groups.tag_Type_NODE |default()%}
+Host node{{ loop.index }} 
+User {{ user }}
+StrictHostKeyChecking no
+GSSAPIAuthentication no
+ServerAliveInterval 60
+TCPKeepAlive yes
+
+{% endfor %}
+
+Host headnode
+User {{ user }}
+StrictHostKeyChecking no
+GSSAPIAuthentication no
+ServerAliveInterval 60
+TCPKeepAlive yes
+
+Host *
+StrictHostKeyChecking no
+GSSAPIAuthentication no
+ServerAliveInterval 60
+TCPKeepAlive yes

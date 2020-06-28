@@ -1,0 +1,86 @@
+---
+- name: add mpiuser group
+  group: name={{ user }} gid={{ gid }} state=present
+  
+- name: add mpiuser user
+  user: name={{ user }} uid={{ gid }} group={{ user }} state=present home=/scratch/{{ user }} generate_ssh_key=yes
+  when: inventory_hostname in groups['tag_Type_NFS']
+
+- name: add mpiuser user | nohome
+  user: name={{ user }} uid={{ gid }} group={{ user }} state=present create_home=no
+  when: inventory_hostname in groups['tag_Type_NODE']
+
+- name: create /home/mpiuser directory on compute nodes
+  file: state=directory path="/home/mpiuser" owner=mpiuser group=mpiuser
+  when: inventory_hostname in groups['tag_Type_NODE']
+
+- name: mount mpiuser home directory
+  mount: name=/home/mpiuser
+         fstype=nfs
+         opts='rw,rsize=1048576,wsize=1048576,hard,intr,bg,tcp,timeo=600,noatime,sec=sys'
+         src='headnode:/scratch/mpiuser'
+         state=mounted
+  when: inventory_hostname in groups['tag_Type_NODE']
+
+- name: copy ec2-user authorized-key file | headnode
+  shell: "cp /home/ec2-user/.ssh/authorized_keys /scratch/{{ user }}/.ssh/authorized_keys"
+  when: inventory_hostname in groups['tag_Type_NFS']
+
+- name: install public key | headnode
+  shell: "cat /scratch/{{ user }}/.ssh/id_rsa.pub >> /scratch/{{ user }}/.ssh/authorized_keys"
+  when: inventory_hostname in groups['tag_Type_NFS']
+
+- name: chown mpiuser authorized-key file | headnode
+  shell: "chown {{ user }}:{{ user }} /scratch/{{ user }}/.ssh/authorized_keys"
+  when: inventory_hostname in groups['tag_Type_NFS']
+
+- name: template ~/ssh/.config | headnode
+  tags: sshconfig
+  template: src=ssh_config.j2 dest="/scratch/{{ user }}/.ssh/config" mode=0644 owner={{ user }} group={{ user }}
+  when: inventory_hostname in groups['tag_Type_NFS']
+
+- name: bash files | NFS
+  copy: src={{ item.name }} dest={{ item.dest }} owner={{ item.owner }}  mode=0644 group={{ item.group }}
+  loop: "{{ NFS_bash_files }}"
+  when: inventory_hostname in groups['tag_Type_NFS']
+
+- name: bash files | NODE
+  copy: src={{ item.name }} dest={{ item.dest }} owner={{ item.owner }}  mode=0644 group={{ item.group }}
+  loop: "{{ NODE_bash_files }}"
+  when: inventory_hostname in groups['tag_Type_NODE']
+
+- name: setsebool
+  tags: selinux
+  shell: "setsebool -P use_nfs_home_dirs 1"
+
+- name: fcontext home | head node
+  tags: selinux
+  shell: "semanage fcontext -a -t user_home_dir_t '/scratch(/.*)'"
+  when: inventory_hostname in groups['tag_Type_NFS']
+
+- name: fcontext ssh | head node
+  tags: selinux
+  shell: "semanage fcontext -a -t ssh_home_t  '/scratch/{{ user }}/.ssh(.*)'"
+  when: inventory_hostname in groups['tag_Type_NFS']
+
+- name: restorecon | head node
+  tags: selinux
+  shell: "restorecon -R -v '/scratch'"
+  when: inventory_hostname in groups['tag_Type_NFS']
+
+- name: template sudo
+  tags: sudo
+  template: src=sysadmin.j2 dest="/tmp/sysadmin-{{ inventory_hostname }}" mode=0644
+  delegate_to: localhost
+  become: no
+
+- name: deploy sudo
+  tags: sudo
+  copy: src="/tmp/sysadmin-{{ inventory_hostname }}" dest=/etc/sudoers.d/sysadmin owner=root group=root mode=0440 validate='visudo -cf %s'
+
+- name: remove template
+  tags: sudo
+  file: name="/tmp/sysadmin-{{ inventory_hostname }}" state=absent
+  delegate_to: localhost
+  become: no
+...

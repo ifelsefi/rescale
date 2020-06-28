@@ -1,0 +1,15 @@
+---
+
+- include: create_networks.yml
+
+- include: create_secgroup.yml
+
+- include: create_ec2.yml
+
+- include: get_ec2_vms.yml
+
+- include: check_ssh.yml
+
+# started this for secondary private interface
+#- include: create_eni.yml
+...

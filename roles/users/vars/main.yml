@@ -1,0 +1,12 @@
+NFS_bash_files:
+  - { name: 'bashrc', dest: '/scratch/mpiuser/.bashrc', owner: 'mpiuser', group: 'mpiuser' }
+  - { name: 'bash_profile', dest: '/scratch/mpiuser/.bash_profile', owner: 'mpiuser', group: 'mpiuser' }
+  - { name: 'bashrc', dest: '/home/ec2-user/.bashrc', owner: 'ec2-user', group: 'ec2-user' }
+  - { name: 'bash_profile', dest: '/home/ec2-user/.bash_profile', owner: 'ec2-user', group: 'ec2-user' }
+
+NODE_bash_files:
+  - { name: 'bashrc', dest: '/home/ec2-user/.bashrc', owner: 'ec2-user', group: 'ec2-user' }
+  - { name: 'bash_profile', dest: '/home/ec2-user/.bash_profile', owner: 'ec2-user', group: 'ec2-user' }
+
+gid: 666
+user: mpiuser

@@ -1,0 +1,8 @@
+---
+- hosts: tag_Type_NFS
+  gather_facts: False
+  remote_user: root
+  become: no
+  roles:
+    - raid
+...

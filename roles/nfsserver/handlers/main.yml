@@ -1,0 +1,9 @@
+
+- name: nfs
+  service: name=nfs-server state=restarted enabled=yes
+
+- name: nfsidmap
+  shell: nfsidmap -c
+
+- name: nfsidmapd
+  service: name=nfs-idmapd state=restarted enabled=yes

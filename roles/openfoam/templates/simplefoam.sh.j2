@@ -1,0 +1,9 @@
+#!/bin/bash
+
+rm -rf /scratch/{{ imported.user }}/FOAM_RUN
+mkdir -p /scratch/{{ imported.user }}/FOAM_RUN
+rsync -az --progress $FOAM_TUTORIALS/incompressible/simpleFoam/pitzDaily /scratch/{{ imported.user }}/FOAM_RUN
+cd /scratch/{{ imported.user }}/FOAM_RUN/pitzDaily
+ 
+mpirun -n 20 --report-bindings --use-hwthread-cpus --hostfile /etc/mpinodes "blockMesh" >> /scratch/{{ imported.user }}/FOAM_RUN/blockMesh_job_log 2>&1
+mpirun -n 20 --report-bindings --use-hwthread-cpus --hostfile /etc/mpinodes "simpleFoam" >> /scratch/{{ imported.user }}/FOAM_RUN/simpleFoam_job_log 2>&1

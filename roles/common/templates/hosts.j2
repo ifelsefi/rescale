@@ -1,0 +1,13 @@
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+
+# compute nodes
+{% for host in groups.tag_Type_NODE |default()%}
+{{ hostvars[host]['ansible_default_ipv4']['address'] }} node-{{ hostvars[host]['ansible_hostname'] }} node{{ loop.index }}
+{% endfor %}
+
+# NFS server | head node
+{% for host in groups.tag_Type_NFS |default()%}
+{{ hostvars[host]['ansible_default_ipv4']['address'] }} NFS-{{ hostvars[host]['ansible_hostname'] }} headnode
+{% endfor %}
+

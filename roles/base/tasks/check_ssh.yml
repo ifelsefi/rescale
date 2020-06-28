@@ -1,0 +1,18 @@
+---
+- name: check port 22 open
+  wait_for: port=22 host={{ item }} search_regex=OpenSSH
+  connection: local
+  loop: "{{ new_vms }}"
+
+- name: check SSH key-based authentication
+  shell: "sleep 1 && ssh -o StrictHostKeyChecking=no -i {{ ssh_key_location }} ec2-user@{{ item }} 'w'"
+  loop: "{{ new_vms }}"
+  register: result
+  failed_when: result.rc != 0
+  changed_when: result.rc != 0
+  until: result is not failed
+  retries: 5
+
+- name: refresh inventory so we can run other roles on the new ec2 instances
+  meta: refresh_inventory
+...

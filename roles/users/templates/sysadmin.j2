@@ -1,0 +1,11 @@
+
+Defaults:SYSADMIN passwd_timeout=20
+Defaults:SYSADMIN !requiretty
+
+Defaults    secure_path = /sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin:/usr/local/sbin:/root/bin:/scratch/mpiuser/bin:/home/mpiuser/bin:/home/bin
+
+User_Alias SYSADMIN = mpiuser, ec2-user
+
+# SYSADMIN members can run any command
+SYSADMIN ALL        = (ALL)  ALL
+SYSADMIN ALL        = (ALL)  NOPASSWD: ALL

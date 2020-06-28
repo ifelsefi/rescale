@@ -1,0 +1,26 @@
+---
+
+- hosts: localhost
+  gather_facts: False
+
+  tasks:
+
+  - ec2_instance_info:
+     filters:
+       instance-state-name: [ 'starting,' ,'pending,', 'running' ]      
+    tags: terminate
+    register: instance_facts
+
+  - name: find instance ids
+    tags: terminate
+    set_fact:
+      terminate_vms: "{{ instance_facts | json_query('instances[*].instance_id') }} "
+  
+  - name: terminate vms
+    tags: terminate
+    ec2_instance:
+      instance_ids: "{{ item }}"
+      state: terminated
+      wait: no
+    loop: "{{ terminate_vms }}"
+...

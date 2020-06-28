@@ -1,0 +1,4 @@
+raid_dev: /dev/md0
+raid_level: 0
+raid_name: RAID
+raid_mount: /scratch

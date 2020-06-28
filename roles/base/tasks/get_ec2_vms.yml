@@ -1,0 +1,14 @@
+---
+
+- ec2_instance_info:
+   filters:
+     instance-state-name: [ 'starting,' ,'pending,', 'running' ]      
+  tags: get,new,terminate
+  register: instance_facts
+
+- name: find dns name
+  tags: get,new
+  set_fact:
+    new_vms: "{{ instance_facts | json_query('instances[*].public_dns_name') }} "
+
+...

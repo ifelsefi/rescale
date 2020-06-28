@@ -1,0 +1,13 @@
+
+- name: find instance ids
+  tags: eni
+  set_fact:
+    eni_vms: "{{ instance_facts | json_query('instances[*].instance_id') }} "
+
+- name: add private subnet eni to instances
+  tags: eni
+  ec2_eni:
+    instance_id: "{{ item }}"
+    device_index: 1
+    subnet_id: "{{ private_subnet.subnet.id }}"
+  loop: "{{ eni_vms }}"

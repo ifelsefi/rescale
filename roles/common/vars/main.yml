@@ -1,0 +1,31 @@
+users:
+  - mpiuser
+  - ec2-user
+
+# sysctl.conf settings
+# tuned per https://www.open-mpi.org/faq/?category=tcp#tcp-selection
+rmem_m: 16777216
+wmem_m: 16777216
+rmem_d: 16777216
+optmem_m: 16777216
+netdev_bl: 30000
+tcp_mem: '16777216 16777216 16777216'
+tcp_rmem: '4096 87380 16777216'
+tcp_wmem: '4096 87380 16777216'
+
+# limits.conf settings
+nofile: 10024
+nproc: 4096
+memlock: "{{ ((ansible_memtotal_mb * 1024) * 0.90)|abs|round|int  }}"
+
+packages:
+  - mdadm
+  - nfs-utils
+  - vim
+  - lsof
+  - nmap
+  - setroubleshoot-server
+  - setroubleshoot
+  - selinux-policy*
+  - setools-console
+  - htop

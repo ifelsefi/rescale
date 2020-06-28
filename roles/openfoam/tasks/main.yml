@@ -1,0 +1,109 @@
+---
+
+- name: include user role vars
+  tags: foam
+  include_vars: file=roles/users/vars/main.yml name=imported
+
+- name: install dependencies
+  tags: foam
+  yum: name=boost,cmake,flex,clang,zlib-devel,git state=latest
+  register: yum_foam_deps
+  until: yum_foam_deps is not failed
+  retries: 5
+  when: inventory_hostname in groups['tag_Type_NFS']
+  
+- name: download openfoam
+  tags: foam
+  get_url: url="{{ base_url }}/v{{ foam_version }}/OpenFOAM-v{{ foam_version }}.tgz" dest={{ dl_dir }}/openfoam.tgz
+  register: download_foam
+  until: download_foam is not failed
+  retries: 5
+  async: 120
+  poll: 5
+  when: inventory_hostname in groups['tag_Type_NFS']
+
+- name: extract openfoam
+  tags: openfoam
+  unarchive: src=/tmp/openfoam.tgz dest={{ prefix }} remote_src=yes owner={{ imported.user }} group={{ imported.user }}
+  when: inventory_hostname in groups['tag_Type_NFS']
+  register: extract_foam
+  until: extract_foam is not failed
+  retries: 5
+
+- name: download openfoam thirdparty
+  tags: foam
+  get_url: url="{{ base_url }}/v{{ foam_version }}/ThirdParty-v{{ foam_version }}.tgz" dest={{ dl_dir }}/thirdparty.tgz
+  register: download_thirdparty
+  until: download_thirdparty is not failed
+  retries: 5
+  async: 120
+  poll: 5
+  when: inventory_hostname in groups['tag_Type_NFS']
+
+- name: extract openfoam thirdparty
+  tags: openfoam
+  unarchive: src=/tmp/thirdparty.tgz dest={{ prefix }} remote_src=yes owner={{ imported.user }} group={{ imported.user }}
+  when: inventory_hostname in groups['tag_Type_NFS']
+  register: extract_thirdparty
+  until: extract_thirdparty is not failed
+  retries: 5
+
+- name: remove third party openmpi
+  tags: openfoam
+  file: path={{ prefix }}/ThirdParty-v{{ foam_version }}/openmpi-1.10.7 state=absent
+  become: yes
+  become_user: mpiuser
+  when: inventory_hostname in groups['tag_Type_NFS']
+
+- name: source openfoam env and compile
+  tags: openfoam
+  shell: "source {{ prefix }}/OpenFOAM-v{{ foam_version }}/etc/bashrc && bash {{ prefix }}/OpenFOAM-v{{ foam_version }}/Allwmake -j"
+  become: yes
+  become_user: mpiuser
+  when: inventory_hostname in groups['tag_Type_NFS']
+
+- name: template foam job script | headnode
+  tags: openfoam
+  template: src=simplefoam.sh.j2 dest="/scratch/{{ imported.user }}/simplefoam.sh" mode=0744 owner={{ imported.user }} group={{ imported.user }}
+  when: inventory_hostname in groups['tag_Type_NFS']
+  become: yes
+  become_user: mpiuser
+
+- name: add openfoam to bashrc
+  tags: openfoam
+  lineinfile: path=/scratch/{{ imported.user }}/.bashrc line="source {{ prefix }}/OpenFOAM-v{{ foam_version }}/etc/bashrc" insertafter='EOF'
+  when: inventory_hostname in groups['tag_Type_NFS']
+  become: yes
+  become_user: mpiuser
+
+- name: run openfoam mpi job | headnode
+  tags: openfoam
+  command: "bash -l /scratch/{{ imported.user }}/simplefoam.sh"
+  when: inventory_hostname in groups['tag_Type_NFS']
+  become: yes
+  become_user: mpiuser
+
+- name: pull results
+  tags: openfoam
+  synchronize: src=/scratch/{{ imported.user }}/FOAM_RUN dest=/tmp mode=pull rsync_path="sudo -u {{ imported.user }} rsync" use_ssh_args=yes
+  become: no
+  when: inventory_hostname in groups['tag_Type_NFS']
+
+  ######################## issue with squashfs ##########################
+
+  #- name: copy singularity.conf so it mounts /scratch
+  #  tags: foam
+  #  copy: src=singularity.conf dest=/etc/singularity.conf
+
+  #- name: pull openfoam from docker hub | takes ~ 5 minutes
+  #  tags: foam
+  #  command: "SINGULARITY_PYTHREADS=1 singularity build /scratch/mpiuser/openfoam7.sif docker://openfoam/openfoam7-paraview56"
+  #  when: inventory_hostname in groups['tag_Type_NFS']
+  #  async: 600
+  #  poll: 15
+  #  register: foam_install
+  #  until: foam_install is not failed
+  #  retries: 2
+  #  become: yes
+  #  become_user: root
+...

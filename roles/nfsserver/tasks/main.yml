@@ -1,0 +1,38 @@
+---
+- name: copy nfs.conf
+  tags: nfs_server
+  template: src=nfs.conf.j2 dest=/etc/nfs.conf mode=0644 owner=root group=root
+  when: inventory_hostname in groups['tag_Type_NFS']
+
+- name: ensure only NFS v4 used
+  tags: nfs_server
+  shell: "systemctl mask --now rpc-statd.service rpcbind.service rpcbind.socket"
+  when: inventory_hostname in groups['tag_Type_NFS']
+
+- name: copy idmapd.conf
+  tags: nfs_serve
+  copy: src=idmapd.conf dest=/etc/idmapd.conf
+  notify:
+   - nfsidmap
+
+- name: template exports for NFS server
+  tags: nfs_server
+  template: src=exports.j2 dest=/etc/exports
+  when: inventory_hostname in groups['tag_Type_NFS']
+  notify:
+   - nfsidmapd
+   - nfs
+   
+- name: create scratch directory on compute nodes
+  tags: nfs_server
+  file: state=directory path="/scratch" owner=root group=root mode=0755
+  when: inventory_hostname in groups['tag_Type_NODE']
+
+- name: mount scratch
+  mount: name=/scratch
+         fstype=nfs
+         opts='rw,rsize=1048576,wsize=1048576,hard,intr,bg,tcp,timeo=600,noatime,sec=sys'
+         src='headnode:/scratch'
+         state=mounted
+  when: inventory_hostname in groups['tag_Type_NODE']
+...

@@ -1,0 +1,42 @@
+---
+- hosts: localhost
+  roles: 
+    - base
+  gather_facts: True
+
+- hosts: aws_ec2
+  roles: 
+    - common
+  become: yes
+  become_user: root
+  gather_facts: True
+
+- hosts: tag_Type_NFS
+  roles: 
+    - raid
+  become: yes
+  become_user: root
+  gather_facts: True
+
+- hosts: aws_ec2
+  roles: 
+    - nfsserver
+    - users
+  become: yes
+  become_user: root
+  gather_facts: True
+
+- hosts: tag_Type_NFS
+  roles: 
+    - openmpi
+  become: yes
+  become_user: root
+  gather_facts: True
+
+- hosts: aws_ec2
+  roles: 
+    - openfoam
+  become: yes
+  become_user: root
+  gather_facts: True
+...

@@ -1,0 +1,52 @@
+---
+- name: include user role vars
+  include_vars: file=roles/users/vars/main.yml name=imported
+  
+- name: ensure dependencies installed
+  tags: openmpi
+  yum: name="{{ packages }}" state=present
+  register: yum_mpi
+  until: yum_mpi is not failed
+  retries: 5
+
+- name: download openmpi
+  tags: openmpi
+  get_url: url={{ base_url }}/{{ mpi_version }}.tar.bz2 dest={{ dl_dir }}
+  register: download_foam
+  until: download_foam is not failed
+  retries: 5
+  async: 120
+  poll: 5
+  
+- name: extract openmpi
+  tags: openmpi
+  unarchive: src=/tmp/{{ mpi_version }}.tar.bz2 dest={{ dl_dir }} remote_src=yes
+
+- name: configure openmpi without support for slurm
+  tags: openmpi
+  command: "./configure --prefix={{ prefix }} {{ config_options }}"
+  args:
+    chdir: "{{ dl_dir }}/{{ mpi_version }}"
+
+- name: test openmpi make
+  tags: openmpi
+  make:
+    chdir: "{{ dl_dir }}/{{ mpi_version }}"
+    target: test
+    params:
+      NUM_THREADS: "{{ ansible_processor_vcpus }}"
+
+  # using shell as make module does not honor the multithreading parameter set above
+- name: make openmpi
+  tags: openmpi
+  shell: "cd {{ dl_dir }}/{{ mpi_version }} && make -j {{ ansible_processor_vcpus }}"
+
+- name: make install openmpi
+  tags: openmpi
+  shell: "cd {{ dl_dir }}/{{ mpi_version }} && make -j {{ ansible_processor_vcpus }} install"
+
+
+- name: copy openmpi mca params file
+  tags: openmpi
+  copy: src=openmpi-mca-params.conf dest=/scratch/{{ imported.user }}/etc/openmpi-mca-params.conf mode=0644
+...

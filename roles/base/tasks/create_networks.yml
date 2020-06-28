@@ -1,0 +1,85 @@
+---
+
+- name: create shared tenancy vpc for hpc
+  ec2_vpc_net:
+    name: hpc_vpc
+    state: present
+    tenancy: default
+    cidr_block: 
+      - "{{ public_cidr }}"
+      - "{{ private_cidr }}"
+    region: "{{ region }}"
+    resource_tags:
+      Name: 
+        - hpc_public_subnet
+        - hpc_private_subnet
+  register: vpc_id
+
+  #- debug:
+  #    msg: "{{ vpc_id }}"
+  #
+  #- debug:
+  #   msg: "{{ vpc_id.vpc.id }}"
+
+- name: create gateway
+  ec2_vpc_igw:
+    vpc_id: "{{ vpc_id.vpc.id }}"
+    state: present
+  register: igw
+
+- name: hpc /24 subnet with mapped public ip
+  ec2_vpc_subnet:
+    state: present
+    vpc_id: "{{ vpc_id.vpc.id }}"
+    cidr: "{{ public_cidr }}"
+    map_public: yes
+    resource_tags:
+      Name: hpc_subnet
+  register: public_subnet
+
+- name: hpc /16 private subnet
+  ec2_vpc_subnet:
+    state: present
+    vpc_id: "{{ vpc_id.vpc.id }}"
+    cidr: "{{ private_cidr }}"
+    map_public: no
+    resource_tags:
+      Name: hpc_private_subnet
+  register: private_subnet
+
+#- debug:
+#   msg: "{{ public_subnet.subnet.id }}"
+
+#- debug:
+#   msg: "{{ private_subnet.subnet.id }}"
+
+- name: create ACL for ssh and icmp to public subnet
+  ec2_vpc_nacl:
+    vpc_id: "{{ vpc_id.vpc.id }}"
+    name: hpc_dmz_acl
+    region: "{{ region }}"
+    subnets: "{{ public_cidr }}"
+    ingress:
+        # rule no, protocol, allow/deny, cidr, icmp_type, icmp_code,
+        #                                       port from, port to
+        - [100, 'tcp', 'allow', '0.0.0.0/0', null, null, 22, 22]
+        - [200, 'icmp', 'allow', '0.0.0.0/0', 0, 8]
+    egress:
+        - [100, 'all', 'allow', '0.0.0.0/0', null, null, null, null]
+    state: present
+
+- name: public routing table
+  ec2_vpc_route_table:
+    vpc_id: "{{ vpc_id.vpc.id }}"
+    region: "{{ region }}"
+    tags:
+      Name: public routing table
+    subnets:
+      - "{{ public_cidr }}"
+      - "{{ private_cidr }}"
+    routes:
+      - dest: 0.0.0.0/0
+        gateway_id: "{{ igw.gateway_id }}"
+  register: public_route_table
+
+...

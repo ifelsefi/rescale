@@ -1,0 +1,3 @@
+{% for host in groups.tag_Type_NODE |default()%}
+/scratch {{ hostvars[host]['ansible_default_ipv4']['address'] }}(rw,async)
+{% endfor %}

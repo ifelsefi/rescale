@@ -1,0 +1,47 @@
+
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+. /etc/bashrc
+fi
+
+# Virtual Env
+if [ -f /usr/bin/virtualenvwrapper.sh ] ; then
+. /usr/bin/virtualenvwrapper.sh
+fi
+
+PS1="\[\e[1;34m\]\u\[\e[0m\]\[\e[0;34m\]@\h\[\e[0m\]\[\e[01;34m\][\w]\[\e[0m\]\[\e[01;37m\]\\$ \[\e[0;32m\]"
+
+LS_COLORS='di=0;32:fi=0;31:ln=0,93:mi=0,37:or=0,96:ex=4;31' ; export LS_COLORS
+
+set -o noclobber
+
+export PATH=/home/mpiuser/bin:/scratch/mpiuser/bin:$PATH
+export LD_LIBRARY_PATH=/home/mpiuser/lib/openmpi:/home/mpiuser/lib:/scratch/mpiuser/lib/openmpi:/scratch/mpiuser/lib:$LD_LIBRARY_PATH
+
+# ALIASES < FUNCTIONS?
+
+# general
+alias genpasswd="strings /dev/urandom | grep -o '[[:alnum:]]' | head -n 30 | tr -d '\n'; echo"
+alias c="clear"
+alias histg="history | grep"
+alias cmount="mount | column -t"
+alias intercept="sudo strace -ff -e trace=write -e write=1,2 -p"
+alias meminfo='free -m -l -t'
+alias ps?="ps aux | grep"
+
+# security
+alias lsipt='sudo /sbin/iptables -L -v -n --line-numbers'
+alias fl="sudo utmpdump /var/log/btmp"
+alias lh="sudo utmpdump /var/log/wtmp"
+alias lu="sudo utmpdump /var/run/utmp"
+alias shred='shred -n 200 -z -u'
+
+#networking
+alias siteget="wget --random-wait -r -p -e robots=off -U mozilla"
+alias listen="lsof -P -i -n"
+alias port='netstat -tunlap'
+alias ipinfo="curl ifconfig.me && curl ifconfig.me/host"
+
+#etc
+alias busy='cat /dev/urandom | hexdump -C | grep "ca fe"'
+export PROMPT_COMMAND='history -a'

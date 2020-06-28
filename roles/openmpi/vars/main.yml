@@ -1,0 +1,12 @@
+---
+packages:
+  - bzip2
+  - perl
+  - gcc-c++
+  - gcc
+prefix: "/scratch/mpiuser"
+dl_dir: "/tmp"
+mpi_version: "openmpi-4.0.4"
+base_url: "https://download.open-mpi.org/release/open-mpi/v4.0"
+config_options: "--without-slurm"
+...

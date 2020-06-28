@@ -1,0 +1,14 @@
+---
+# This playbook configures NFS on EC2
+
+- hosts: aws_ec2
+  remote_user: ec2-user
+  gather_facts: True
+  become: true
+  become_user: root
+  roles:
+    - nfsserver
+  vars:
+    packages:
+      - nfs-utils
+...
