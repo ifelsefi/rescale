@@ -10,7 +10,7 @@ A quick OpenFoam simulation, [PitzDaily](https://openfoamwiki.net/index.php/Pitz
 
 Requirements
 ------------
-Install [Singularity](https://github.com/hpcng/singularity/releases) locally.  Working with version 3.5.3 on Linux Mint.
+Install [Singularity](https://github.com/hpcng/singularity/releases) locally.  No issues with version 3.5.3 on Linux Mint (xenial).
 
 Create an AWS account, [IAM](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html) user, and generate your own API keys.
 
@@ -71,9 +71,9 @@ Check Ansible dynamic inventory:
 `ansible-inventory --list`
 
 
-Then SSH into head node, ideally as **mpiuser**, with **tag_Type_NFS**.  You could also connect as **ec2-user** then **sudo su - mpiuser.**
+Then SSH into head node, ideally as **mpiuser**, show in the inventory group **tag_Type_NFS**.  You could also connect as **ec2-user** then **sudo su - mpiuser.**
 
-Note that passwordless ssh authentication has only been configured across the cluster for **mpiuser** not **ec2-user.**
+Note that passwordless ssh authentication has only been configured across the cluster for **mpiuser** not **ec2-user** thus jobs are executed under that account.
 
 
 ParaView
