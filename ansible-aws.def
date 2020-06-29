@@ -84,7 +84,7 @@ chown -R ${SINGULARITY_USER}:${SINGULARITY_USER} ${SINGULARITY_ROOTFS}/aws
 chown -R ${SINGULARITY_USER}:${SINGULARITY_USER} ${SINGULARITY_ROOTFS}/venv
 
 # clone ansible role
-GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" git clone git@github.com:ifelsefi/rescale.git ${SINGULARITY_ROOTFS}/ansible
+git clone https://github.com/ifelsefi/rescale.git ${SINGULARITY_ROOTFS}/ansible
 
 # set permissions on ansible role
 chown -R ${SINGULARITY_USER}:${SINGULARITY_USER} ${SINGULARITY_ROOTFS}/ansible
